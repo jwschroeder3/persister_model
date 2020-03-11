@@ -22,7 +22,7 @@ function gillespie(x, alpha, beta, tau, delta, N)
     T = zeros(N)
     tsteps = zeros(N)
     X = zeros((size(delta)[1], N))
-    tau_arr = rand(N)
+    t_arr = rand(N)
     choice_arr = rand(N)
 
     # Simulation
@@ -36,10 +36,10 @@ function gillespie(x, alpha, beta, tau, delta, N)
         summed = sum(rates)
 
         # Determine WHEN state change occurs
-        tau = (-1) / summed * log(tau_arr[i])
-        t = t + tau
+        t_step = (-1) / summed * log(t_arr[i])
+        t = t + t_step
         T[i] = t
-        tsteps[i] = tau
+        tsteps[i] = t_step
 
         # Determine WHICH reaction occurs with relative propabilities
         reac = sum(isless.(cumsum(rates/summed), choice_arr[i])) + 1 # add one to get to 1-indexed julia
@@ -47,6 +47,23 @@ function gillespie(x, alpha, beta, tau, delta, N)
         X[:, i] = x
     end
     return (X, T, tsteps)
+end
+
+
+function plot_gillespie(model, T, X)
+    plot_array = Any[]
+    plot_number = size(X)[1]
+    for i in 1:plot_number
+        push!(
+            plot_array,
+            plot(
+                T,
+                X[i,:],
+                label=model.labels[i]
+            )
+        )
+    end
+    plot(plot_array..., layout=(length(plot_array), 1))
 end
 
 # """Computes theoretical means, variances, and covariances for system.  
@@ -83,7 +100,7 @@ end
     ------------------
 
 """
-function run_gillespie(model, N=10000, start_near_ss=false)
+function run_gillespie(model; N=10000, start_near_ss=false)
     
     # Optional flag for starting simulation from predicted steady states when testing. 
     # false by default.
@@ -141,8 +158,8 @@ mutable struct persisterParams
 end
 
 alpha = 0.1
-beta = 0.1
-tau = 2
+beta = 0.2
+tau = 200
 delta = [
     -1 1 1;
     1 -1 0
@@ -157,22 +174,6 @@ mod = persisterParams(
     labels
 )
 
-X, T, tsteps = run_gillespie(mod)
-
-function plot_gillespie(model, T, X)
-    plot_array = Any[]
-    plot_number = size(X)[1]
-    for i in 1:plot_number
-        push!(
-            plot_array,
-            plot(
-                T,
-                X[i,:],
-                label=model.labels[i]
-            )
-        )
-    end
-    plot(plot_array..., layout=(length(plot_array), 1))
-end
+X, T, tsteps = run_gillespie(mod, N=1000000)
 
 plot_gillespie(mod, T, X)
